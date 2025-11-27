@@ -1,19 +1,20 @@
-<p align="center"><img src="https://github.com/a7650/vue3-draggable-resizable/blob/main/docs/logo.png" alt="logo"></p>
+Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch]. The original repository seems to be inactive since 2022. I have forked it to continue development, fix bugs, and add new features like [User's New Feature].
 
-<h1 align="center">Vue3DraggableResizable</h1>
+<p align="center"><img src="https://github.com/hae-long/vue3-draggable-resizable/blob/main/docs/logo.png" alt="logo"></p>
+
+<h1 align="center">Vue3-Draggable-Resizable</h1>
 <div align="center">
 
 [![npm version](https://badge.fury.io/js/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/vue3-draggable-resizable)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
 [![npm](https://img.shields.io/npm/dt/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/vue3-draggable-resizable)
-[![vue version](https://img.shields.io/badge/vue_version->=3-brightgreen.svg?style=flat-square)](https://github.com/a7650/vue3-draggable-resizable)
+[![vue version](https://img.shields.io/badge/vue_version->=3-brightgreen.svg?style=flat-square)](https://github.com/hae-long/vue3-draggable-resizable)
 
 </div>
 
-> [Vue3 组件] 用于拖拽调整位置和大小的的组件，同时支持冲突检测，元素吸附对齐，实时参考线。
-> [ Vue3 Component ] Draggable and resizable component for vue3, and, support element adsorption alignment, real-time reference line, etc.
+> [Vue3 Component] Draggable and resizable component for vue3, with support for collision detection, element snap alignment, and real-time reference lines.
 
-[点击查看中文文档](https://github.com/a7650/vue3-draggable-resizable/blob/main/docs/document_zh.md)
+[한국어 문서](https://github.com/hae-long/vue3-draggable-resizable/blob/main/docs/document_kr.md)
 
 ## Table of Contents
 

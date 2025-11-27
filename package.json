@@ -1,10 +1,10 @@
 {
   "name": "vue3-draggable-resizable",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "private": false,
-  "description": "[Vue3 Component] 拖拽缩放并具有自动吸附对齐、参考线等功能",
+  "description": "[Vue3 Component] Draggable and resizable with auto-snap alignment and guide lines",
   "scripts": {
-    "dev": "vue-cli-service serve",
+    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && vue-cli-service serve",
     "build": "npm run build:lib && npm run build:dts",
     "lint": "vue-cli-service lint",
     "build:lib": "vue-cli-service build --target lib --name Vue3DraggableResizable src/index.ts",
@@ -35,19 +35,19 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/a7650/vue3-draggable-resizable.git"
+    "url": "git+https://github.com/hae-long/vue3-draggable-resizable.git"
   },
   "bugs": {
-    "url": "https://github.com/a7650/vue3-draggable-resizable/issues"
+    "url": "https://github.com/hae-long/vue3-draggable-resizable/issues"
   },
-  "homepage": "https://github.com/a7650/vue3-draggable-resizable",
+  "homepage": "https://github.com/hae-long/vue3-draggable-resizable",
   "keywords": [
     "vue3",
     "component",
     "draggable",
     "resizable",
-    "拖拽",
-    "吸附对齐"
+    "drag",
+    "snap-alignment"
   ],
   "main": "src/index.js",
   "module": "src/index.js",
