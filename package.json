@@ -1,6 +1,6 @@
 {
   "name": "vue3-draggable-resizable",
-  "version": "1.6.6",
+  "version": "2.0.0",
   "private": false,
   "description": "[Vue3 Component] Draggable and resizable with auto-snap alignment and guide lines",
   "scripts": {

@@ -56,6 +56,90 @@ export function getId() {
   return String(Math.random()).substr(2) + String(Date.now())
 }
 
+// 단위 변환 함수들
+/**
+ * Converts a value to pixels based on the unit type
+ * @param value - The numeric value to convert
+ * @param unit - The unit type ('px' or '%')
+ * @param parentSize - The parent element size in pixels
+ * @returns The value converted to pixels
+ * @throws Error if value or parentSize is negative
+ */
+export function convertToPixel(value: number, unit: string, parentSize: number): number {
+  if (value < 0) {
+    throw new Error('Value cannot be negative')
+  }
+  if (parentSize < 0) {
+    throw new Error('Parent size cannot be negative')
+  }
+
+  if (unit === '%') {
+    return (value / 100) * parentSize
+  }
+  return value
+}
+
+/**
+ * Converts a pixel value to the specified unit type
+ * @param value - The pixel value to convert
+ * @param unit - The target unit type ('px' or '%')
+ * @param parentSize - The parent element size in pixels
+ * @returns The value converted to the target unit (with 2 decimal precision for %)
+ * @throws Error if value or parentSize is negative, or parentSize is zero when converting to %
+ */
+export function convertFromPixel(value: number, unit: string, parentSize: number): number {
+  if (value < 0) {
+    throw new Error('Value cannot be negative')
+  }
+  if (parentSize < 0) {
+    throw new Error('Parent size cannot be negative')
+  }
+
+  if (unit === '%') {
+    // Return 0 if parent size is not yet calculated (during initialization)
+    if (parentSize === 0) {
+      return 0
+    }
+    const percentValue = (value / parentSize) * 100
+    return Number(percentValue.toFixed(2))  // 소수점 2자리로 제한
+  }
+  return value
+}
+
+// 단위 변환 검증 함수들
+/**
+ * Validates if a percentage value is within valid range (0-100)
+ * @param value - The percentage value to validate
+ * @returns true if value is between 0 and 100 (inclusive), false otherwise
+ */
+export function validatePercentage(value: number): boolean {
+  return value >= 0 && value <= 100
+}
+
+/**
+ * Validates if a pixel value is within parent bounds
+ * @param value - The pixel value to validate
+ * @param parentSize - The parent element size in pixels
+ * @returns true if value is between 0 and parentSize (inclusive), false otherwise
+ * @throws Error if parentSize is negative
+ */
+export function validatePixel(value: number, parentSize: number): boolean {
+  if (parentSize < 0) {
+    throw new Error('Parent size cannot be negative')
+  }
+  return value >= 0 && value <= parentSize
+}
+
+// 랜덤 색상 생성
+/**
+ * Generates a random hex color string
+ * @returns A random color in hex format (e.g., '#3A7FE1')
+ */
+export function generateRandomColor(): string {
+  const randomInt = Math.floor(Math.random() * 0xFFFFFF)
+  return '#' + randomInt.toString(16).padStart(6, '0').toUpperCase()
+}
+
 export function getReferenceLineMap(
   containerProvider: ContainerProvider,
   parentSize: ParentSize,

@@ -5,7 +5,9 @@ import {
   getId,
   getReferenceLineMap,
   addEvent,
-  removeEvent
+  removeEvent,
+  convertToPixel,
+  convertFromPixel
 } from './utils'
 import {
   ContainerProvider,
@@ -25,9 +27,9 @@ export function useState<T>(initialState: T): [Ref<T>, (value: T) => T] {
   return [state, setState]
 }
 
-export function initState(props: any, emit: any) {
-  const [width, setWidth] = useState<number>(props.initW)
-  const [height, setHeight] = useState<number>(props.initH)
+export function initState(props: any, emit: any, parentSize?: ReturnType<typeof initParent>) {
+  const [width, setWidth] = useState<number>(props.initW || 0)
+  const [height, setHeight] = useState<number>(props.initH || 0)
   const [left, setLeft] = useState<number>(props.x)
   const [top, setTop] = useState<number>(props.y)
   const [enable, setEnable] = useState<boolean>(props.active)
@@ -42,22 +44,32 @@ export function initState(props: any, emit: any) {
   watch(
     width,
     (newVal) => {
-      emit('update:w', newVal)
-    },
-    { immediate: true }
+      const emitVal = parentSize && props.typeW === '%' 
+        ? convertFromPixel(newVal, '%', parentSize.parentWidth.value) 
+        : newVal
+      emit('update:w', emitVal)
+    }
   )
   watch(
     height,
     (newVal) => {
-      emit('update:h', newVal)
-    },
-    { immediate: true }
+      const emitVal = parentSize && props.typeH === '%' 
+        ? convertFromPixel(newVal, '%', parentSize.parentHeight.value) 
+        : newVal
+      emit('update:h', emitVal)
+    }
   )
   watch(top, (newVal) => {
-    emit('update:y', newVal)
+    const emitVal = parentSize && props.typeY === '%' 
+      ? convertFromPixel(newVal, '%', parentSize.parentHeight.value) 
+      : newVal
+    emit('update:y', emitVal)
   })
   watch(left, (newVal) => {
-    emit('update:x', newVal)
+    const emitVal = parentSize && props.typeX === '%' 
+      ? convertFromPixel(newVal, '%', parentSize.parentWidth.value) 
+      : newVal
+    emit('update:x', emitVal)
   })
   watch(enable, (newVal, oldVal) => {
     emit('update:active', newVal)
@@ -106,13 +118,35 @@ export function initState(props: any, emit: any) {
 export function initParent(containerRef: Ref<HTMLElement | undefined>) {
   const parentWidth = ref(0)
   const parentHeight = ref(0)
-  onMounted(() => {
+  let resizeObserver: any = null
+
+  const updateParentSize = () => {
     if (containerRef.value && containerRef.value.parentElement) {
       const { width, height } = getElSize(containerRef.value.parentElement)
       parentWidth.value = width
       parentHeight.value = height
     }
+  }
+
+  onMounted(() => {
+    updateParentSize()
+
+    // ResizeObserver를 사용하여 parent element의 크기 변경 감지
+    if (containerRef.value?.parentElement && typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      const ResizeObserverConstructor = (window as any).ResizeObserver
+      resizeObserver = new ResizeObserverConstructor(() => {
+        updateParentSize()
+      })
+      resizeObserver.observe(containerRef.value.parentElement)
+    }
   })
+
+  onUnmounted(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+    }
+  })
+
   return {
     parentWidth,
     parentHeight
@@ -241,7 +275,8 @@ export function initDraggableContainer(
   draggable: Ref<boolean>,
   emit: any,
   containerProvider: ContainerProvider | null,
-  parentSize: ReturnType<typeof initParent>
+  parentSize: ReturnType<typeof initParent>,
+  props: any
 ) {
   const { left: x, top: y, width: w, height: h, dragging, id } = containerProps
   const {
@@ -251,6 +286,7 @@ export function initDraggableContainer(
     setResizingHandle
   } = containerProps
   const { setTop, setLeft } = limitProps
+  // a7650 원본 방식: 드래그 시작 시점의 위치 저장 (업데이트하지 않음)
   let lstX = 0
   let lstY = 0
   let lstPageX = 0
@@ -287,11 +323,64 @@ export function initDraggableContainer(
     e.preventDefault()
     if (!(dragging.value && containerRef.value)) return
     const [pageX, pageY] = getPosition(e)
+
+    // a7650 원본 로직: total delta 계산 (lstPageX/Y는 업데이트 안됨)
     const deltaX = pageX - lstPageX
     const deltaY = pageY - lstPageY
     let newLeft = lstX + deltaX
     let newTop = lstY + deltaY
-    if (referenceLineMap !== null) {
+
+    if (props.snapToGrid && props.gridSpacing > 0) {
+      // Grid snap: 거리 기반 - 가장 가까운 edge를 격자선에 snap (Figma/Sketch 방식)
+      const grid = props.gridSpacing
+
+      // X축: 왼쪽 edge와 오른쪽 edge 중 격자선에 가장 가까운 것 선택
+      const leftToGrid = Math.round(newLeft / grid) * grid
+      const rightEdge = newLeft + w.value
+      const rightToGrid = Math.round(rightEdge / grid) * grid
+
+      const leftDist = Math.abs(newLeft - leftToGrid)
+      const rightDist = Math.abs(rightEdge - rightToGrid)
+
+      let snappedLeft: number
+      if (leftDist <= rightDist) {
+        // 왼쪽 edge가 더 가까움
+        snappedLeft = leftToGrid
+      } else {
+        // 오른쪽 edge가 더 가까움
+        snappedLeft = rightToGrid - w.value
+      }
+
+      // Y축: 위쪽 edge와 아래쪽 edge 중 격자선에 가장 가까운 것 선택
+      const topToGrid = Math.round(newTop / grid) * grid
+      const bottomEdge = newTop + h.value
+      const bottomToGrid = Math.round(bottomEdge / grid) * grid
+
+      const topDist = Math.abs(newTop - topToGrid)
+      const bottomDist = Math.abs(bottomEdge - bottomToGrid)
+
+      let snappedTop: number
+      if (topDist <= bottomDist) {
+        // 위쪽 edge가 더 가까움
+        snappedTop = topToGrid
+      } else {
+        // 아래쪽 edge가 더 가까움
+        snappedTop = bottomToGrid - h.value
+      }
+
+      // Snap된 값으로 설정
+      const finalX = setLeft(snappedLeft)
+      const finalY = setTop(snappedTop)
+
+      if (containerProvider) {
+        containerProvider.setMatchedLine(null)
+      }
+
+      const emitX = props.typeX === '%' ? convertFromPixel(finalX, '%', parentSize.parentWidth.value) : finalX
+      const emitY = props.typeY === '%' ? convertFromPixel(finalY, '%', parentSize.parentHeight.value) : finalY
+      emit('dragging', { x: emitX, y: emitY })
+    } else if (referenceLineMap !== null && containerProvider) {
+      // Reference line 적용 (원본 로직)
       const widgetSelfLine = {
         col: [newLeft, newLeft + w.value / 2, newLeft + w.value],
         row: [newTop, newTop + h.value / 2, newTop + h.value]
@@ -338,19 +427,32 @@ export function initDraggableContainer(
           })
           .filter((i) => i !== null)
       }
-      containerProvider!.setMatchedLine(matchedLine as MatchedLine)
+      containerProvider.setMatchedLine(matchedLine as MatchedLine)
+
+      const finalX = setLeft(newLeft)
+      const finalY = setTop(newTop)
+      const emitX = props.typeX === '%' ? convertFromPixel(finalX, '%', parentSize.parentWidth.value) : finalX
+      const emitY = props.typeY === '%' ? convertFromPixel(finalY, '%', parentSize.parentHeight.value) : finalY
+      emit('dragging', { x: emitX, y: emitY })
+    } else {
+      // Grid snap도 reference line도 없는 경우
+      const finalX = setLeft(newLeft)
+      const finalY = setTop(newTop)
+      const emitX = props.typeX === '%' ? convertFromPixel(finalX, '%', parentSize.parentWidth.value) : finalX
+      const emitY = props.typeY === '%' ? convertFromPixel(finalY, '%', parentSize.parentHeight.value) : finalY
+      emit('dragging', { x: emitX, y: emitY })
     }
-    emit('dragging', { x: setLeft(newLeft), y: setTop(newTop) })
   }
   const handleDown = (e: HandleEvent) => {
     if (!draggable.value) return
     setDragging(true)
+
+    // a7650 원본 로직: 드래그 시작 시점의 위치 저장
     lstX = x.value
     lstY = y.value
     lstPageX = getPosition(e)[0]
     lstPageY = getPosition(e)[1]
-    // document.documentElement.addEventListener('mousemove', handleDrag)
-    // document.documentElement.addEventListener('mouseup', handleUp)
+
     addEvent(documentElement, MOVE_HANDLES, handleDrag)
     addEvent(documentElement, UP_HANDLES, handleUp)
     if (containerProvider && !containerProvider.disabled.value) {
@@ -359,11 +461,17 @@ export function initDraggableContainer(
   }
   watch(dragging, (cur, pre) => {
     if (!pre && cur) {
-      emit('drag-start', { x: x.value, y: y.value })
+      // 단위가 %인 경우 변환하여 emit
+      const emitX = props.typeX === '%' ? convertFromPixel(x.value, '%', parentSize.parentWidth.value) : x.value
+      const emitY = props.typeY === '%' ? convertFromPixel(y.value, '%', parentSize.parentHeight.value) : y.value
+      emit('drag-start', { x: emitX, y: emitY })
       setEnable(true)
       setDragging(true)
     } else {
-      emit('drag-end', { x: x.value, y: y.value })
+      // 단위가 %인 경우 변환하여 emit
+      const emitX = props.typeX === '%' ? convertFromPixel(x.value, '%', parentSize.parentWidth.value) : x.value
+      const emitY = props.typeY === '%' ? convertFromPixel(y.value, '%', parentSize.parentHeight.value) : y.value
+      emit('drag-end', { x: emitX, y: emitY })
       setDragging(false)
     }
   })
@@ -407,6 +515,7 @@ export function initResizeHandle(
     setResizingMinHeight
   } = containerProps
   const { parentWidth, parentHeight } = parentSize
+  // a7650 원본 방식: 리사이즈 시작 시점의 위치/크기 저장 (업데이트하지 않음)
   let lstW = 0
   let lstH = 0
   let lstX = 0
@@ -420,10 +529,14 @@ export function initResizeHandle(
   const resizeHandleDrag = (e: HandleEvent) => {
     e.preventDefault()
     let [_pageX, _pageY] = getPosition(e)
+
+    // a7650 원본 로직: total delta 계산 (lstPageX/Y는 업데이트 안됨)
     let deltaX = _pageX - lstPageX
     let deltaY = _pageY - lstPageY
     let _deltaX = deltaX
     let _deltaY = deltaY
+
+    // Aspect ratio lock 처리 (원본 로직)
     if (props.lockAspectRatio) {
       deltaX = Math.abs(deltaX)
       deltaY = deltaX * tmpAspectRatio
@@ -439,6 +552,8 @@ export function initResizeHandle(
         }
       }
     }
+
+    // a7650 원본 로직: setHeight/setWidth 호출 후 실제 값 사용
     if (idx0 === 't') {
       setHeight(lstH - deltaY)
       setTop(lstY - (height.value - lstH))
@@ -451,19 +566,56 @@ export function initResizeHandle(
     } else if (idx1 === 'r') {
       setWidth(lstW + deltaX)
     }
-    emit('resizing', {
-      x: left.value,
-      y: top.value,
-      w: width.value,
-      h: height.value
-    })
+
+    // Grid snap 적용: resize 후 위치와 크기를 격자선에 맞춤
+    if (props.snapToGrid && props.gridSpacing > 0) {
+      const grid = props.gridSpacing
+
+      // 왼쪽/위쪽 edge를 움직이는 handle (tl, tm, ml)
+      if (idx1 === 'l') {
+        const snappedLeft = Math.round(left.value / grid) * grid
+        const deltaLeft = snappedLeft - left.value
+        setLeft(snappedLeft)
+        setWidth(width.value - deltaLeft)
+      }
+      if (idx0 === 't') {
+        const snappedTop = Math.round(top.value / grid) * grid
+        const deltaTop = snappedTop - top.value
+        setTop(snappedTop)
+        setHeight(height.value - deltaTop)
+      }
+
+      // 오른쪽/아래쪽 edge를 움직이는 handle (br, bm, mr)
+      if (idx1 === 'r') {
+        const rightEdge = left.value + width.value
+        const snappedRight = Math.round(rightEdge / grid) * grid
+        setWidth(snappedRight - left.value)
+      }
+      if (idx0 === 'b') {
+        const bottomEdge = top.value + height.value
+        const snappedBottom = Math.round(bottomEdge / grid) * grid
+        setHeight(snappedBottom - top.value)
+      }
+    }
+
+    // emit (단위 변환 추가)
+    const emitX = props.typeX === '%' ? convertFromPixel(left.value, '%', parentWidth.value) : left.value
+    const emitY = props.typeY === '%' ? convertFromPixel(top.value, '%', parentHeight.value) : top.value
+    const emitW = props.typeW === '%' ? convertFromPixel(width.value, '%', parentWidth.value) : width.value
+    const emitH = props.typeH === '%' ? convertFromPixel(height.value, '%', parentHeight.value) : height.value
+    emit('resizing', { x: emitX, y: emitY, w: emitW, h: emitH })
   }
   const resizeHandleUp = () => {
+    // 단위가 %인 경우 변환하여 emit
+    const emitX = props.typeX === '%' ? convertFromPixel(left.value, '%', parentWidth.value) : left.value
+    const emitY = props.typeY === '%' ? convertFromPixel(top.value, '%', parentHeight.value) : top.value
+    const emitW = props.typeW === '%' ? convertFromPixel(width.value, '%', parentWidth.value) : width.value
+    const emitH = props.typeH === '%' ? convertFromPixel(height.value, '%', parentHeight.value) : height.value
     emit('resize-end', {
-      x: left.value,
-      y: top.value,
-      w: width.value,
-      h: height.value
+      x: emitX,
+      y: emitY,
+      w: emitW,
+      h: emitH
     })
     setResizingHandle('')
     setResizing(false)
@@ -481,6 +633,9 @@ export function initResizeHandle(
     e.stopPropagation()
     setResizingHandle(handleType)
     setResizing(true)
+
+    const [pageX, pageY] = getPosition(e)
+
     idx0 = handleType[0]
     idx1 = handleType[1]
     if (props.lockAspectRatio) {
@@ -518,19 +673,25 @@ export function initResizeHandle(
       setResizingMaxHeight(maxHeight)
       setResizingMaxWidth(maxWidth)
     }
+
+    // a7650 원본 로직: 리사이즈 시작 시점의 위치/크기 저장
     lstW = width.value
     lstH = height.value
     lstX = left.value
     lstY = top.value
-    const lstPagePosition = getPosition(e)
-    lstPageX = lstPagePosition[0]
-    lstPageY = lstPagePosition[1]
+    lstPageX = pageX
+    lstPageY = pageY
     tmpAspectRatio = aspectRatio.value
+    // 단위가 %인 경우 변환하여 emit
+    const emitX = props.typeX === '%' ? convertFromPixel(left.value, '%', parentWidth.value) : left.value
+    const emitY = props.typeY === '%' ? convertFromPixel(top.value, '%', parentHeight.value) : top.value
+    const emitW = props.typeW === '%' ? convertFromPixel(width.value, '%', parentWidth.value) : width.value
+    const emitH = props.typeH === '%' ? convertFromPixel(height.value, '%', parentHeight.value) : height.value
     emit('resize-start', {
-      x: left.value,
-      y: top.value,
-      w: width.value,
-      h: height.value
+      x: emitX,
+      y: emitY,
+      w: emitW,
+      h: emitH
     })
     // document.documentElement.addEventListener('mousemove', resizeHandleDrag)
     // document.documentElement.addEventListener('mouseup', resizeHandleUp)
@@ -554,31 +715,45 @@ export function initResizeHandle(
 
 export function watchProps(
   props: any,
-  limits: ReturnType<typeof initLimitSizeAndMethods>
+  limits: ReturnType<typeof initLimitSizeAndMethods>,
+  parentSize: ReturnType<typeof initParent>,
+  containerProps?: ReturnType<typeof initState>
 ) {
   const { setWidth, setHeight, setLeft, setTop } = limits
   watch(
     () => props.w,
     (newVal: number) => {
-      setWidth(newVal)
+      // drag/resize 중에는 prop 변경을 무시 (피드백 루프 방지)
+      if (containerProps?.dragging.value || containerProps?.resizing.value) return
+      const pixelValue = convertToPixel(newVal, props.typeW, parentSize.parentWidth.value)
+      setWidth(pixelValue)
     }
   )
   watch(
     () => props.h,
     (newVal: number) => {
-      setHeight(newVal)
+      // drag/resize 중에는 prop 변경을 무시 (피드백 루프 방지)
+      if (containerProps?.dragging.value || containerProps?.resizing.value) return
+      const pixelValue = convertToPixel(newVal, props.typeH, parentSize.parentHeight.value)
+      setHeight(pixelValue)
     }
   )
   watch(
     () => props.x,
     (newVal: number) => {
-      setLeft(newVal)
+      // drag/resize 중에는 prop 변경을 무시 (피드백 루프 방지)
+      if (containerProps?.dragging.value || containerProps?.resizing.value) return
+      const pixelValue = convertToPixel(newVal, props.typeX, parentSize.parentWidth.value)
+      setLeft(pixelValue)
     }
   )
   watch(
     () => props.y,
     (newVal: number) => {
-      setTop(newVal)
+      // drag/resize 중에는 prop 변경을 무시 (피드백 루프 방지)
+      if (containerProps?.dragging.value || containerProps?.resizing.value) return
+      const pixelValue = convertToPixel(newVal, props.typeY, parentSize.parentHeight.value)
+      setTop(pixelValue)
     }
   )
 }
