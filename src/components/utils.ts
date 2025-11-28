@@ -140,6 +140,141 @@ export function generateRandomColor(): string {
   return '#' + randomInt.toString(16).padStart(6, '0').toUpperCase()
 }
 
+// Rotation utility functions
+/**
+ * Convert degrees to radians
+ */
+export function degToRad(deg: number): number {
+  return (deg * Math.PI) / 180
+}
+
+/**
+ * Rotate a point around a center point
+ */
+export function rotatePoint(
+  px: number,
+  py: number,
+  cx: number,
+  cy: number,
+  angleDeg: number
+): { x: number; y: number } {
+  const angleRad = degToRad(angleDeg)
+  const cos = Math.cos(angleRad)
+  const sin = Math.sin(angleRad)
+  const dx = px - cx
+  const dy = py - cy
+  return {
+    x: cx + dx * cos - dy * sin,
+    y: cy + dx * sin + dy * cos
+  }
+}
+
+/**
+ * Get the cursor type based on handle position and rotation angle
+ * Returns the appropriate cursor for the rotated handle
+ */
+export function getRotatedCursor(handle: ResizingHandle, rotation: number): string {
+  // Base cursor angles for each handle (when rotation is 0)
+  const baseCursors: Record<string, number> = {
+    'tl': -135,  // nw-resize
+    'tm': -90,   // n-resize
+    'tr': -45,   // ne-resize
+    'mr': 0,     // e-resize
+    'br': 45,    // se-resize
+    'bm': 90,    // s-resize
+    'bl': 135,   // sw-resize
+    'ml': 180    // w-resize
+  }
+
+  // Cursor types in clockwise order
+  const cursorTypes = [
+    'e-resize',   // 0
+    'se-resize',  // 45
+    's-resize',   // 90
+    'sw-resize',  // 135
+    'w-resize',   // 180
+    'nw-resize',  // 225 (-135)
+    'n-resize',   // 270 (-90)
+    'ne-resize'   // 315 (-45)
+  ]
+
+  if (!handle || baseCursors[handle] === undefined) return 'default'
+
+  // Calculate the effective angle
+  let angle = baseCursors[handle] + rotation
+  // Normalize to 0-360
+  angle = ((angle % 360) + 360) % 360
+
+  // Map angle to cursor index (each cursor covers 45 degrees)
+  const index = Math.round(angle / 45) % 8
+
+  return cursorTypes[index]
+}
+
+/**
+ * Transform mouse delta based on rotation angle
+ * This converts screen-space mouse movement to element-local movement
+ */
+export function transformDelta(
+  deltaX: number,
+  deltaY: number,
+  rotation: number
+): { dx: number; dy: number } {
+  const angleRad = degToRad(-rotation) // Negative to transform from screen to local
+  const cos = Math.cos(angleRad)
+  const sin = Math.sin(angleRad)
+  return {
+    dx: deltaX * cos - deltaY * sin,
+    dy: deltaX * sin + deltaY * cos
+  }
+}
+
+/**
+ * Calculate the bounding box of a rotated rectangle
+ * Returns the axis-aligned bounding box that contains the rotated rectangle
+ */
+export function getRotatedBoundingBox(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  rotation: number
+): { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number } {
+  const cx = x + w / 2
+  const cy = y + h / 2
+
+  // Four corners of the rectangle
+  const corners = [
+    { x: x, y: y },         // top-left
+    { x: x + w, y: y },     // top-right
+    { x: x + w, y: y + h }, // bottom-right
+    { x: x, y: y + h }      // bottom-left
+  ]
+
+  // Rotate all corners
+  const rotatedCorners = corners.map(corner =>
+    rotatePoint(corner.x, corner.y, cx, cy, rotation)
+  )
+
+  // Find bounding box
+  const xs = rotatedCorners.map(c => c.x)
+  const ys = rotatedCorners.map(c => c.y)
+
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const minY = Math.min(...ys)
+  const maxY = Math.max(...ys)
+
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY
+  }
+}
+
 export function getReferenceLineMap(
   containerProvider: ContainerProvider,
   parentSize: ParentSize,

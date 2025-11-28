@@ -171,6 +171,7 @@
               :parent="false"
               :gridSpacing="gridSpacing"
               :snapToGrid="showGrid"
+              :rotatable="true"
               @click="selectComponent(component.id)"
               @activated="handleActivated(component.id)"
               @deactivated="handleDeactivated(component.id)"

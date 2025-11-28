@@ -87,6 +87,7 @@ export interface ActiveElementInfo {
   y: number
   w: number
   h: number
+  rotation?: number  // Rotation angle in degrees (optional, defaults to 0)
 }
 
 export type SetActiveElement = (element: ActiveElementInfo | null) => void

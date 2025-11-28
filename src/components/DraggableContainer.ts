@@ -11,7 +11,7 @@ import {
   SetActiveElement,
   GetActiveElement
 } from './types'
-import { IDENTITY } from './utils'
+import { IDENTITY, getRotatedBoundingBox } from './utils'
 
 export default defineComponent({
   name: 'DraggableContainer',
@@ -123,13 +123,33 @@ export default defineComponent({
       const indicators: SpacingIndicator[] = []
       const positions = Object.entries(positionStore).filter(([id]) => id !== active.id)
 
-      // Active element edges
-      const activeLeft = active.x
-      const activeRight = active.x + active.w
-      const activeTop = active.y
-      const activeBottom = active.y + active.h
-      const activeCenterX = active.x + active.w / 2
-      const activeCenterY = active.y + active.h / 2
+      // Get rotated bounding box for active element if it has rotation
+      const rotation = active.rotation || 0
+      let activeLeft: number
+      let activeRight: number
+      let activeTop: number
+      let activeBottom: number
+      let activeCenterX: number
+      let activeCenterY: number
+
+      if (rotation !== 0) {
+        // Use axis-aligned bounding box of rotated element
+        const rotatedBounds = getRotatedBoundingBox(active.x, active.y, active.w, active.h, rotation)
+        activeLeft = rotatedBounds.minX
+        activeRight = rotatedBounds.maxX
+        activeTop = rotatedBounds.minY
+        activeBottom = rotatedBounds.maxY
+        activeCenterX = (rotatedBounds.minX + rotatedBounds.maxX) / 2
+        activeCenterY = (rotatedBounds.minY + rotatedBounds.maxY) / 2
+      } else {
+        // Non-rotated element uses original bounds
+        activeLeft = active.x
+        activeRight = active.x + active.w
+        activeTop = active.y
+        activeBottom = active.y + active.h
+        activeCenterX = active.x + active.w / 2
+        activeCenterY = active.y + active.h / 2
+      }
 
       for (const [, pos] of positions) {
         const otherLeft = pos.x

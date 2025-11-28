@@ -7,7 +7,9 @@ import {
   addEvent,
   removeEvent,
   convertToPixel,
-  convertFromPixel
+  convertFromPixel,
+  transformDelta,
+  rotatePoint
 } from './utils'
 import {
   ContainerProvider,
@@ -502,7 +504,8 @@ export function initResizeHandle(
   limitProps: ReturnType<typeof initLimitSizeAndMethods>,
   parentSize: ReturnType<typeof initParent>,
   props: any,
-  emit: any
+  emit: any,
+  getRotation?: () => number
 ) {
   const { setWidth, setHeight, setLeft, setTop } = limitProps
   const { width, height, left, top, aspectRatio } = containerProps
@@ -525,6 +528,9 @@ export function initResizeHandle(
   let tmpAspectRatio = 1
   let idx0 = ''
   let idx1 = ''
+  // Store center position at resize start (for rotation-aware resizing)
+  let lstCenterX = 0
+  let lstCenterY = 0
   const documentElement = document.documentElement
   const resizeHandleDrag = (e: HandleEvent) => {
     e.preventDefault()
@@ -533,6 +539,15 @@ export function initResizeHandle(
     // Calculate total delta from resize start position
     let deltaX = _pageX - lstPageX
     let deltaY = _pageY - lstPageY
+
+    // Transform delta based on rotation
+    const rotation = getRotation ? getRotation() : 0
+    if (rotation !== 0) {
+      const transformed = transformDelta(deltaX, deltaY, rotation)
+      deltaX = transformed.dx
+      deltaY = transformed.dy
+    }
+
     let _deltaX = deltaX
     let _deltaY = deltaY
 
@@ -553,22 +568,114 @@ export function initResizeHandle(
       }
     }
 
-    // Apply resize: call setHeight/setWidth then use actual values
+    // Calculate new dimensions
+    let newWidth = lstW
+    let newHeight = lstH
+    let newLeft = lstX
+    let newTop = lstY
+
     if (idx0 === 't') {
-      setHeight(lstH - deltaY)
-      setTop(lstY - (height.value - lstH))
+      newHeight = lstH - deltaY
+      newTop = lstY + deltaY
     } else if (idx0 === 'b') {
-      setHeight(lstH + deltaY)
+      newHeight = lstH + deltaY
     }
     if (idx1 === 'l') {
-      setWidth(lstW - deltaX)
-      setLeft(lstX - (width.value - lstW))
+      newWidth = lstW - deltaX
+      newLeft = lstX + deltaX
     } else if (idx1 === 'r') {
-      setWidth(lstW + deltaX)
+      newWidth = lstW + deltaX
     }
 
+    // Apply minimum size constraints BEFORE position calculation
+    // This prevents the anchor point from moving when hitting min size
+    const minW = props.minW as number
+    const minH = props.minH as number
+    if (newWidth < minW) {
+      newWidth = minW
+    }
+    if (newHeight < minH) {
+      newHeight = minH
+    }
+
+    // When rotated, we need to adjust position to keep the anchor point (opposite corner) fixed
+    if (rotation !== 0) {
+      // The key insight: when resizing a rotated rectangle, the anchor point
+      // (opposite corner in local space) must remain fixed in screen space.
+      //
+      // Algorithm:
+      // 1. Calculate anchor point position in local space (relative to center)
+      // 2. The rotated anchor point in screen space = center + rotate(localAnchor, rotation)
+      // 3. After resize, calculate new center so anchor stays in same screen position
+
+      const rad = rotation * Math.PI / 180
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+
+      // Determine anchor point offsets in local coordinate (before rotation)
+      // For each handle, the anchor is the opposite corner/edge
+      let anchorLocalX = 0  // offset from center in local X
+      let anchorLocalY = 0  // offset from center in local Y
+
+      // Vertical anchor offset (for height changes)
+      if (idx0 === 't') {
+        // Dragging top edge, anchor is bottom (positive Y in local space)
+        anchorLocalY = lstH / 2
+      } else if (idx0 === 'b') {
+        // Dragging bottom edge, anchor is top (negative Y in local space)
+        anchorLocalY = -lstH / 2
+      }
+
+      // Horizontal anchor offset (for width changes)
+      if (idx1 === 'l') {
+        // Dragging left edge, anchor is right (positive X in local space)
+        anchorLocalX = lstW / 2
+      } else if (idx1 === 'r') {
+        // Dragging right edge, anchor is left (negative X in local space)
+        anchorLocalX = -lstW / 2
+      }
+
+      // Calculate anchor point position in screen space (before resize)
+      // screenAnchor = center + rotate(localAnchor, rotation)
+      const anchorScreenX = lstCenterX + anchorLocalX * cos - anchorLocalY * sin
+      const anchorScreenY = lstCenterY + anchorLocalX * sin + anchorLocalY * cos
+
+      // Calculate new anchor point offset in local space (after resize)
+      let newAnchorLocalX = 0
+      let newAnchorLocalY = 0
+
+      if (idx0 === 't') {
+        newAnchorLocalY = newHeight / 2
+      } else if (idx0 === 'b') {
+        newAnchorLocalY = -newHeight / 2
+      }
+
+      if (idx1 === 'l') {
+        newAnchorLocalX = newWidth / 2
+      } else if (idx1 === 'r') {
+        newAnchorLocalX = -newWidth / 2
+      }
+
+      // Calculate new center so that anchor remains at same screen position
+      // anchorScreenX = newCenterX + newAnchorLocalX * cos - newAnchorLocalY * sin
+      // anchorScreenY = newCenterY + newAnchorLocalX * sin + newAnchorLocalY * cos
+      // Solving for newCenter:
+      const newCenterX = anchorScreenX - (newAnchorLocalX * cos - newAnchorLocalY * sin)
+      const newCenterY = anchorScreenY - (newAnchorLocalX * sin + newAnchorLocalY * cos)
+
+      // Calculate new left/top from new center
+      newLeft = newCenterX - newWidth / 2
+      newTop = newCenterY - newHeight / 2
+    }
+
+    // Apply the new values through limit functions
+    setWidth(newWidth)
+    setHeight(newHeight)
+    setLeft(newLeft)
+    setTop(newTop)
+
     // Apply grid snap: align position and size to grid lines after resize
-    if (props.snapToGrid && props.gridSpacing > 0) {
+    if (props.snapToGrid && props.gridSpacing > 0 && rotation === 0) {
       const grid = props.gridSpacing
       const minW = props.minW
       const minH = props.minH
@@ -578,21 +685,21 @@ export function initResizeHandle(
       if (idx1 === 'l') {
         const fixedRightEdge = lstX + lstW
         const snappedLeft = Math.round(left.value / grid) * grid
-        const newWidth = fixedRightEdge - snappedLeft
+        const newWidthSnapped = fixedRightEdge - snappedLeft
         // Only apply snap if new width >= minW
-        if (newWidth >= minW) {
+        if (newWidthSnapped >= minW) {
           left.value = snappedLeft
-          width.value = newWidth
+          width.value = newWidthSnapped
         }
       }
       if (idx0 === 't') {
         const fixedBottomEdge = lstY + lstH
         const snappedTop = Math.round(top.value / grid) * grid
-        const newHeight = fixedBottomEdge - snappedTop
+        const newHeightSnapped = fixedBottomEdge - snappedTop
         // Only apply snap if new height >= minH
-        if (newHeight >= minH) {
+        if (newHeightSnapped >= minH) {
           top.value = snappedTop
-          height.value = newHeight
+          height.value = newHeightSnapped
         }
       }
 
@@ -600,17 +707,17 @@ export function initResizeHandle(
       if (idx1 === 'r') {
         const rightEdge = left.value + width.value
         const snappedRight = Math.round(rightEdge / grid) * grid
-        const newWidth = snappedRight - left.value
-        if (newWidth >= minW) {
-          setWidth(newWidth)
+        const newWidthSnapped = snappedRight - left.value
+        if (newWidthSnapped >= minW) {
+          setWidth(newWidthSnapped)
         }
       }
       if (idx0 === 'b') {
         const bottomEdge = top.value + height.value
         const snappedBottom = Math.round(bottomEdge / grid) * grid
-        const newHeight = snappedBottom - top.value
-        if (newHeight >= minH) {
-          setHeight(newHeight)
+        const newHeightSnapped = snappedBottom - top.value
+        if (newHeightSnapped >= minH) {
+          setHeight(newHeightSnapped)
         }
       }
     }
@@ -699,6 +806,9 @@ export function initResizeHandle(
     lstPageX = pageX
     lstPageY = pageY
     tmpAspectRatio = aspectRatio.value
+    // Store center position for rotation-aware resizing
+    lstCenterX = left.value + width.value / 2
+    lstCenterY = top.value + height.value / 2
     // Convert to % if unit type is %
     const emitX = props.typeX === '%' ? convertFromPixel(left.value, '%', parentWidth.value) : left.value
     const emitY = props.typeY === '%' ? convertFromPixel(top.value, '%', parentHeight.value) : top.value

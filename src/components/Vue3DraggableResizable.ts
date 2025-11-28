@@ -8,13 +8,14 @@ import {
   initResizeHandle
 } from './hooks'
 import './index.css'
-import { getElSize, filterHandles, IDENTITY, convertToPixel, convertFromPixel } from './utils'
+import { getElSize, filterHandles, IDENTITY, convertToPixel, convertFromPixel, getRotatedCursor, getRotatedBoundingBox } from './utils'
 import {
   UpdatePosition,
   GetPositionStore,
   ResizingHandle,
   ContainerProvider,
-  SetMatchedLine
+  SetMatchedLine,
+  SetActiveElement
 } from './types'
 
 export const ALL_HANDLES: ResizingHandle[] = [
@@ -155,6 +156,22 @@ const VdrProps = {
   snapToGrid: {
     type: Boolean,
     default: false
+  },
+  rotatable: {
+    type: Boolean,
+    default: false
+  },
+  rotation: {
+    type: Number,
+    default: 0
+  },
+  rotationSnap: {
+    type: Number,
+    default: 0  // 0 means no snap, e.g., 15 for 15-degree snap
+  },
+  classNameRotateHandle: {
+    type: String,
+    default: 'rotate-handle'
   }
 }
 
@@ -167,11 +184,15 @@ const emits = [
   'resizing',
   'drag-end',
   'resize-end',
+  'rotate-start',
+  'rotating',
+  'rotate-end',
   'update:w',
   'update:h',
   'update:x',
   'update:y',
-  'update:active'
+  'update:active',
+  'update:rotation'
 ]
 
 const VueDraggableResizable = defineComponent({
@@ -184,6 +205,7 @@ const VueDraggableResizable = defineComponent({
     const containerProps = initState(props, emit, parentSize)
     const provideIdentity = inject('identity', Symbol())
     let containerProvider: ContainerProvider | null = null
+    let setActiveElement: SetActiveElement | null = null
     if (provideIdentity === IDENTITY) {
       containerProvider = {
         updatePosition: inject<UpdatePosition>('updatePosition')!,
@@ -194,12 +216,18 @@ const VueDraggableResizable = defineComponent({
         adsorbRows: inject<number[]>('adsorbRows')!,
         setMatchedLine: inject<SetMatchedLine>('setMatchedLine')!
       }
+      setActiveElement = inject<SetActiveElement | null>('setActiveElement', null)
     }
     const limitProps = initLimitSizeAndMethods(
       props,
       parentSize,
       containerProps
     )
+
+    // Rotation state - declared early for use in initResizeHandle
+    const currentRotation = ref(props.rotation)
+    const rotating = ref(false)
+
     initDraggableContainer(
       containerRef,
       containerProps,
@@ -215,7 +243,8 @@ const VueDraggableResizable = defineComponent({
       limitProps,
       parentSize,
       props,
-      emit
+      emit,
+      () => currentRotation.value
     )
     watchProps(props, limitProps, parentSize, containerProps)
 
@@ -243,15 +272,123 @@ const VueDraggableResizable = defineComponent({
       }
     }
 
+    // Helper function to update active element info
+    const updateActiveElementInfo = () => {
+      if (setActiveElement) {
+        setActiveElement({
+          id: containerProps.id,
+          x: containerProps.left.value,
+          y: containerProps.top.value,
+          w: containerProps.width.value,
+          h: containerProps.height.value,
+          rotation: currentRotation.value
+        })
+      }
+    }
+
     // Watch for active state changes
     watch(() => containerProps.enable.value, (isActive) => {
       if (isActive) {
         activateZIndex()
+        updateActiveElementInfo()
       } else {
         deactivateZIndex()
+        if (setActiveElement) {
+          setActiveElement(null)
+        }
       }
     })
-    
+
+    // Watch for position/size changes during drag/resize
+    watch(
+      [containerProps.left, containerProps.top, containerProps.width, containerProps.height],
+      () => {
+        if (containerProps.enable.value && (containerProps.dragging.value || containerProps.resizing.value)) {
+          updateActiveElementInfo()
+        }
+      }
+    )
+
+    // Rotation logic (state already declared above for initResizeHandle)
+    let rotateStartAngle = 0
+    let rotateStartRotation = 0
+    let centerX = 0
+    let centerY = 0
+
+    // Watch for external rotation prop changes
+    watch(() => props.rotation, (newVal) => {
+      if (!rotating.value) {
+        currentRotation.value = newVal
+      }
+    })
+
+    const getAngle = (cx: number, cy: number, px: number, py: number) => {
+      const dx = px - cx
+      const dy = py - cy
+      return Math.atan2(dy, dx) * (180 / Math.PI)
+    }
+
+    const rotateHandleDown = (e: MouseEvent | TouchEvent) => {
+      if (!props.rotatable) return
+      e.stopPropagation()
+      e.preventDefault()
+
+      rotating.value = true
+
+      // Get center of element
+      if (containerRef.value) {
+        const rect = containerRef.value.getBoundingClientRect()
+        centerX = rect.left + rect.width / 2
+        centerY = rect.top + rect.height / 2
+      }
+
+      // Get start angle
+      const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX
+      const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY
+      rotateStartAngle = getAngle(centerX, centerY, pageX, pageY)
+      rotateStartRotation = currentRotation.value
+
+      emit('rotate-start', { rotation: currentRotation.value })
+
+      document.addEventListener('mousemove', rotateHandleMove)
+      document.addEventListener('mouseup', rotateHandleUp)
+      document.addEventListener('touchmove', rotateHandleMove)
+      document.addEventListener('touchend', rotateHandleUp)
+    }
+
+    const rotateHandleMove = (e: MouseEvent | TouchEvent) => {
+      if (!rotating.value) return
+      e.preventDefault()
+
+      const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX
+      const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY
+
+      const currentAngle = getAngle(centerX, centerY, pageX, pageY)
+      let newRotation = rotateStartRotation + (currentAngle - rotateStartAngle)
+
+      // Normalize to 0-360
+      newRotation = ((newRotation % 360) + 360) % 360
+
+      // Apply rotation snap if configured
+      if (props.rotationSnap > 0) {
+        newRotation = Math.round(newRotation / props.rotationSnap) * props.rotationSnap
+      }
+
+      currentRotation.value = newRotation
+      emit('update:rotation', newRotation)
+      emit('rotating', { rotation: newRotation })
+    }
+
+    const rotateHandleUp = () => {
+      rotating.value = false
+      emit('rotate-end', { rotation: currentRotation.value })
+
+      document.removeEventListener('mousemove', rotateHandleMove)
+      document.removeEventListener('mouseup', rotateHandleUp)
+      document.removeEventListener('touchmove', rotateHandleMove)
+      document.removeEventListener('touchend', rotateHandleUp)
+    }
+
     return {
       containerRef,
       containerProvider,
@@ -261,7 +398,10 @@ const VueDraggableResizable = defineComponent({
       ...resizeHandle,
       setZIndex,
       activateZIndex,
-      deactivateZIndex
+      deactivateZIndex,
+      currentRotation,
+      rotating,
+      rotateHandleDown
     }
   },
   computed: {
@@ -270,19 +410,26 @@ const VueDraggableResizable = defineComponent({
       let height = this.typeH === '%' ? convertFromPixel(this.height, '%', this.parentHeight) : this.height
       let top = this.typeY === '%' ? convertFromPixel(this.top, '%', this.parentHeight) : this.top
       let left = this.typeX === '%' ? convertFromPixel(this.left, '%', this.parentWidth) : this.left
-      
+
       // Limit to 2 decimal places for % units
       if (this.typeW === '%') width = Number(width.toFixed(2))
       if (this.typeH === '%') height = Number(height.toFixed(2))
       if (this.typeY === '%') top = Number(top.toFixed(2))
       if (this.typeX === '%') left = Number(left.toFixed(2))
-      
-      return {
+
+      const style: { [propName: string]: string } = {
         width: width + this.typeW,
         height: height + this.typeH,
         top: top + this.typeY,
         left: left + this.typeX
       }
+
+      // Add rotation transform if rotatable
+      if (this.rotatable && this.currentRotation !== 0) {
+        style.transform = `rotate(${this.currentRotation}deg)`
+      }
+
+      return style
     },
     klass(): { [propName: string]: string | boolean } {
       return {
@@ -290,7 +437,8 @@ const VueDraggableResizable = defineComponent({
         [this.classNameDragging]: this.dragging,
         [this.classNameResizing]: this.resizing,
         [this.classNameDraggable]: this.draggable,
-        [this.classNameResizable]: this.resizable
+        [this.classNameResizable]: this.resizable,
+        rotating: this.rotating
       }
     }
   },
@@ -330,6 +478,45 @@ const VueDraggableResizable = defineComponent({
     }
   },
   render() {
+    const children = [
+      this.$slots.default && this.$slots.default(),
+      ...this.handlesFiltered.map((item) => {
+        // Calculate rotated cursor if rotatable
+        const cursor = this.rotatable && this.currentRotation !== 0
+          ? getRotatedCursor(item as ResizingHandle, this.currentRotation)
+          : undefined  // Use CSS default cursor
+
+        return h('div', {
+          class: [
+            'vdr-handle',
+            'vdr-handle-' + item,
+            this.classNameHandle,
+            `${this.classNameHandle}-${item}`
+          ],
+          style: {
+            display: this.enable ? 'block' : 'none',
+            ...(cursor ? { cursor } : {})
+          },
+          onMousedown: (e: MouseEvent) =>
+            this.resizeHandleDown(e, <ResizingHandle>item),
+          onTouchstart: (e: TouchEvent) =>
+            this.resizeHandleDown(e, <ResizingHandle>item)
+        })
+      })
+    ]
+
+    // Add rotate handle if rotatable
+    if (this.rotatable) {
+      children.push(
+        h('div', {
+          class: ['vdr-rotate-handle', this.classNameRotateHandle],
+          style: { display: this.enable ? 'block' : 'none' },
+          onMousedown: this.rotateHandleDown,
+          onTouchstart: this.rotateHandleDown
+        })
+      )
+    }
+
     return h(
       'div',
       {
@@ -337,24 +524,7 @@ const VueDraggableResizable = defineComponent({
         class: ['vdr-container', this.klass],
         style: this.style
       },
-      [
-        this.$slots.default && this.$slots.default(),
-        ...this.handlesFiltered.map((item) =>
-          h('div', {
-            class: [
-              'vdr-handle',
-              'vdr-handle-' + item,
-              this.classNameHandle,
-              `${this.classNameHandle}-${item}`
-            ],
-            style: { display: this.enable ? 'block' : 'none' },
-            onMousedown: (e: MouseEvent) =>
-              this.resizeHandleDown(e, <ResizingHandle>item),
-            onTouchstart: (e: TouchEvent) =>
-              this.resizeHandleDown(e, <ResizingHandle>item)
-          })
-        )
-      ]
+      children
     )
   }
 })
