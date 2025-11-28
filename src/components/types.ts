@@ -1,5 +1,4 @@
 import { Ref } from 'vue'
-import { initParent } from './hooks'
 
 export interface Position {
   x: number
@@ -60,7 +59,10 @@ export type ResizingHandle =
   | 'br'
   | ''
 
-export type ParentSize = ReturnType<typeof initParent>
+export interface ParentSize {
+  parentWidth: Ref<number>
+  parentHeight: Ref<number>
+}
 
 export type ReferenceLineMap = Record<
   'col' | 'row',

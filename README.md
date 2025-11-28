@@ -37,7 +37,7 @@ Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch].
 ### Usage
 
 ```bash
-$ npm install vue3-draggable-resizable
+$ npm install @haelong/vue3-draggable-resizable
 ```
 
 Register the Vue3DraggableResizable
@@ -84,6 +84,10 @@ Here is a complete example of using "vue-template"
         v-model:y="y"
         v-model:w="w"
         v-model:h="h"
+        v-model:typeX="typeX"
+        v-model:typeY="typeY"
+        v-model:typeW="typeW"
+        v-model:typeH="typeH"
         v-model:active="active"
         :draggable="true"
         :resizable="true"
@@ -113,8 +117,12 @@ export default defineComponent({
     return {
       x: 100,
       y: 100,
-      h: 100,
-      w: 100,
+      h: 25,
+      w: 25,
+      typeX="px",
+      typeY="px",
+      typeW="%",
+      typeH="%",
       active: false
     }
   },

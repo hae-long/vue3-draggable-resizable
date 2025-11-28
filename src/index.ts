@@ -1,12 +1,14 @@
 import VueDraggableResizable from './components/Vue3DraggableResizable'
 import DraggableContainer from './components/DraggableContainer'
-import { App, Plugin } from 'vue'
+import type { App, Plugin } from 'vue'
 
-VueDraggableResizable.install = (app: App) => {
-  app.component(VueDraggableResizable.name, VueDraggableResizable)
-  app.component(DraggableContainer.name, DraggableContainer)
-  return app
+const VueDraggableResizablePlugin: Plugin = {
+  install(app: App) {
+    app.component('Vue3DraggableResizable', VueDraggableResizable)
+    app.component('DraggableContainer', DraggableContainer)
+  }
 }
 
-export { default as DraggableContainer } from './components/DraggableContainer'
-export default VueDraggableResizable as typeof VueDraggableResizable & Plugin
+export { DraggableContainer }
+export { VueDraggableResizable }
+export default VueDraggableResizablePlugin
