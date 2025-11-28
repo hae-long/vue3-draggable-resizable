@@ -5,7 +5,11 @@ import {
   UpdatePosition,
   GetPositionStore,
   MatchedLine,
-  SetMatchedLine
+  SetMatchedLine,
+  SpacingIndicator,
+  ActiveElementInfo,
+  SetActiveElement,
+  GetActiveElement
 } from './types'
 import { IDENTITY } from './utils'
 
@@ -55,6 +59,14 @@ export default defineComponent({
     showGridNumbersY: {
       type: Boolean,
       default: false
+    },
+    showSpacing: {
+      type: Boolean,
+      default: true
+    },
+    spacingColor: {
+      type: String,
+      default: '#ff6b6b'
     }
   },
   setup(props) {
@@ -93,6 +105,151 @@ export default defineComponent({
     provide('adsorbParent', toRef(props, 'adsorbParent'))
     provide('adsorbCols', props.adsorbCols || [])
     provide('adsorbRows', props.adsorbRows || [])
+
+    // Active element for spacing calculation
+    const activeElement = ref<ActiveElementInfo | null>(null)
+    const setActiveElement: SetActiveElement = (element: ActiveElementInfo | null) => {
+      activeElement.value = element
+    }
+    const getActiveElement: GetActiveElement = () => activeElement.value
+    provide('setActiveElement', setActiveElement)
+    provide('getActiveElement', getActiveElement)
+
+    // Calculate spacing indicators between active element and other elements
+    const spacingIndicators = computed<SpacingIndicator[]>(() => {
+      if (!activeElement.value || !props.showSpacing) return []
+
+      const active = activeElement.value
+      const indicators: SpacingIndicator[] = []
+      const positions = Object.entries(positionStore).filter(([id]) => id !== active.id)
+
+      // Active element edges
+      const activeLeft = active.x
+      const activeRight = active.x + active.w
+      const activeTop = active.y
+      const activeBottom = active.y + active.h
+      const activeCenterX = active.x + active.w / 2
+      const activeCenterY = active.y + active.h / 2
+
+      for (const [, pos] of positions) {
+        const otherLeft = pos.x
+        const otherRight = pos.x + pos.w
+        const otherTop = pos.y
+        const otherBottom = pos.y + pos.h
+
+        // Check vertical overlap (for horizontal spacing)
+        const verticalOverlap = !(activeBottom < otherTop || activeTop > otherBottom)
+
+        // Check horizontal overlap (for vertical spacing)
+        const horizontalOverlap = !(activeRight < otherLeft || activeLeft > otherRight)
+
+        if (verticalOverlap) {
+          // Calculate Y position for the indicator (use overlapping area center)
+          const overlapTop = Math.max(activeTop, otherTop)
+          const overlapBottom = Math.min(activeBottom, otherBottom)
+          const indicatorY = (overlapTop + overlapBottom) / 2
+
+          // Horizontal spacing: active is to the left of other
+          if (activeRight < otherLeft) {
+            const distance = otherLeft - activeRight
+            indicators.push({
+              type: 'horizontal',
+              x: activeRight,
+              y: indicatorY,
+              length: distance,
+              distance
+            })
+          }
+          // Horizontal spacing: active is to the right of other
+          else if (activeLeft > otherRight) {
+            const distance = activeLeft - otherRight
+            indicators.push({
+              type: 'horizontal',
+              x: otherRight,
+              y: indicatorY,
+              length: distance,
+              distance
+            })
+          }
+        }
+
+        if (horizontalOverlap) {
+          // Calculate X position for the indicator (use overlapping area center)
+          const overlapLeft = Math.max(activeLeft, otherLeft)
+          const overlapRight = Math.min(activeRight, otherRight)
+          const indicatorX = (overlapLeft + overlapRight) / 2
+
+          // Vertical spacing: active is above other
+          if (activeBottom < otherTop) {
+            const distance = otherTop - activeBottom
+            indicators.push({
+              type: 'vertical',
+              x: indicatorX,
+              y: activeBottom,
+              length: distance,
+              distance
+            })
+          }
+          // Vertical spacing: active is below other
+          else if (activeTop > otherBottom) {
+            const distance = activeTop - otherBottom
+            indicators.push({
+              type: 'vertical',
+              x: indicatorX,
+              y: otherBottom,
+              length: distance,
+              distance
+            })
+          }
+        }
+      }
+
+      // Also check spacing to container edges (parent boundaries)
+      if (containerSize.width > 0 && containerSize.height > 0) {
+        // Left edge
+        if (activeLeft > 0) {
+          indicators.push({
+            type: 'horizontal',
+            x: 0,
+            y: activeCenterY,
+            length: activeLeft,
+            distance: activeLeft
+          })
+        }
+        // Right edge
+        if (activeRight < containerSize.width) {
+          indicators.push({
+            type: 'horizontal',
+            x: activeRight,
+            y: activeCenterY,
+            length: containerSize.width - activeRight,
+            distance: containerSize.width - activeRight
+          })
+        }
+        // Top edge
+        if (activeTop > 0) {
+          indicators.push({
+            type: 'vertical',
+            x: activeCenterX,
+            y: 0,
+            length: activeTop,
+            distance: activeTop
+          })
+        }
+        // Bottom edge
+        if (activeBottom < containerSize.height) {
+          indicators.push({
+            type: 'vertical',
+            x: activeCenterX,
+            y: activeBottom,
+            length: containerSize.height - activeBottom,
+            distance: containerSize.height - activeBottom
+          })
+        }
+      }
+
+      return indicators
+    })
 
     const gridStyle = computed(() => {
       if (!props.showGrid || props.gridSpacing <= 0) {
@@ -151,7 +308,9 @@ export default defineComponent({
       matchedCols,
       gridStyle,
       containerRef,
-      containerSize
+      containerSize,
+      spacingIndicators,
+      activeElement
     }
   },
   methods: {
@@ -249,6 +408,121 @@ export default defineComponent({
       }
 
       return numbers
+    },
+    renderSpacingIndicators() {
+      if (!this.showSpacing || !this.activeElement) {
+        return []
+      }
+
+      return this.spacingIndicators.map((indicator, index) => {
+        const isHorizontal = indicator.type === 'horizontal'
+        const lineStyle = {
+          position: 'absolute',
+          backgroundColor: this.spacingColor,
+          zIndex: '10001',
+          pointerEvents: 'none'
+        }
+
+        const labelStyle = {
+          position: 'absolute',
+          backgroundColor: this.spacingColor,
+          color: '#fff',
+          fontSize: '10px',
+          padding: '2px 4px',
+          borderRadius: '2px',
+          zIndex: '10002',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap'
+        }
+
+        if (isHorizontal) {
+          // Horizontal line and label
+          return h('div', { key: `spacing-h-${index}` }, [
+            // Line
+            h('div', {
+              style: {
+                ...lineStyle,
+                left: indicator.x + 'px',
+                top: (indicator.y - 0.5) + 'px',
+                width: indicator.length + 'px',
+                height: '1px'
+              }
+            }),
+            // Arrow left
+            h('div', {
+              style: {
+                ...lineStyle,
+                left: indicator.x + 'px',
+                top: (indicator.y - 4) + 'px',
+                width: '1px',
+                height: '8px'
+              }
+            }),
+            // Arrow right
+            h('div', {
+              style: {
+                ...lineStyle,
+                left: (indicator.x + indicator.length - 1) + 'px',
+                top: (indicator.y - 4) + 'px',
+                width: '1px',
+                height: '8px'
+              }
+            }),
+            // Label
+            h('div', {
+              style: {
+                ...labelStyle,
+                left: (indicator.x + indicator.length / 2) + 'px',
+                top: (indicator.y - 18) + 'px',
+                transform: 'translateX(-50%)'
+              }
+            }, `${Math.round(indicator.distance)}px`)
+          ])
+        } else {
+          // Vertical line and label
+          return h('div', { key: `spacing-v-${index}` }, [
+            // Line
+            h('div', {
+              style: {
+                ...lineStyle,
+                left: (indicator.x - 0.5) + 'px',
+                top: indicator.y + 'px',
+                width: '1px',
+                height: indicator.length + 'px'
+              }
+            }),
+            // Arrow top
+            h('div', {
+              style: {
+                ...lineStyle,
+                left: (indicator.x - 4) + 'px',
+                top: indicator.y + 'px',
+                width: '8px',
+                height: '1px'
+              }
+            }),
+            // Arrow bottom
+            h('div', {
+              style: {
+                ...lineStyle,
+                left: (indicator.x - 4) + 'px',
+                top: (indicator.y + indicator.length - 1) + 'px',
+                width: '8px',
+                height: '1px'
+              }
+            }),
+            // Label
+            h('div', {
+              style: {
+                ...labelStyle,
+                left: (indicator.x + 8) + 'px',
+                top: (indicator.y + indicator.length / 2) + 'px',
+                transform: 'translateY(-50%)'
+              }
+            }, `${Math.round(indicator.distance)}px`)
+          ])
+        }
+      })
     }
   },
   render() {
@@ -260,13 +534,15 @@ export default defineComponent({
           width: '100%',
           height: '100%',
           position: 'relative',
+          overflow: 'hidden',
           ...this.gridStyle
         }
       },
       [
         this.$slots.default && this.$slots.default(),
         ...this.renderReferenceLine(),
-        ...this.renderGridNumbers()
+        ...this.renderGridNumbers(),
+        ...this.renderSpacingIndicators()
       ]
     )
   }

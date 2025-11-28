@@ -70,3 +70,24 @@ export type ReferenceLineMap = Record<
     [propName: number]: Record<'min' | 'max' | 'value', number>
   }
 >
+
+// Spacing indicator between elements
+export interface SpacingIndicator {
+  type: 'horizontal' | 'vertical'
+  x: number
+  y: number
+  length: number
+  distance: number
+}
+
+// Active element info for spacing calculation
+export interface ActiveElementInfo {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+export type SetActiveElement = (element: ActiveElementInfo | null) => void
+export type GetActiveElement = () => ActiveElementInfo | null
