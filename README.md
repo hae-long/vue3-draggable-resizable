@@ -1,28 +1,31 @@
-Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch]. The original repository seems to be inactive since 2022. I have forked it to continue development, fix bugs, and add new features like [User's New Feature].
+Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch]. The original repository seems to be inactive since 2022. I have forked it to continue development, fix bugs, and add new features.
 
 <p align="center"><img src="https://github.com/hae-long/vue3-draggable-resizable/blob/main/docs/logo.png" alt="logo"></p>
 
 <h1 align="center">Vue3-Draggable-Resizable</h1>
 <div align="center">
 
-[![npm version](https://badge.fury.io/js/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/vue3-draggable-resizable)
+[![npm version](https://badge.fury.io/js/@hae-long/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
-[![npm](https://img.shields.io/npm/dt/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/vue3-draggable-resizable)
+[![npm](https://img.shields.io/npm/dt/@hae-long/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
 [![vue version](https://img.shields.io/badge/vue_version->=3-brightgreen.svg?style=flat-square)](https://github.com/hae-long/vue3-draggable-resizable)
 
 </div>
 
-> [Vue3 Component] Draggable and resizable component for vue3, with support for collision detection, element snap alignment, and real-time reference lines.
+> [Vue3 Component] Draggable and resizable component for vue3, with support for collision detection, element snap alignment, real-time reference lines, grid snap, and unit conversion (px/%).
 
 [한국어 문서](https://github.com/hae-long/vue3-draggable-resizable/blob/main/docs/document_kr.md)
 
 ## Table of Contents
 
 - [Features](#features)
-- [Usage](#Usage)
+- [Usage](#usage)
   - [Props](#props)
   - [Events](#events)
-  - [Use adsorption alignment](#Use-adsorption-alignment)
+  - [Use adsorption alignment](#use-adsorption-alignment)
+  - [Grid System](#grid-system)
+  - [Unit Conversion (px/%)](#unit-conversion)
+  - [Utility Functions](#utility-functions)
 
 ### Features
 
@@ -33,11 +36,14 @@ Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch].
 - Provide your own markup for handles
 - Adsorption alignment
 - Reference line
+- **Grid system with snap-to-grid**
+- **Unit conversion (px/%) support**
+- **Utility functions for unit conversion**
 
 ### Usage
 
 ```bash
-$ npm install @haelong/vue3-draggable-resizable
+$ npm install @hae-long/vue3-draggable-resizable
 ```
 
 Register the Vue3DraggableResizable
@@ -46,9 +52,9 @@ Register the Vue3DraggableResizable
 // >main.js
 import { createApp } from 'vue'
 import App from './App.vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
-//default styles
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+// default styles
+import '@hae-long/vue3-draggable-resizable/style.css'
 
 // You will have a global component named "Vue3DraggableResizable"
 createApp(App)
@@ -61,9 +67,9 @@ You can also use it separately within the component
 ```js
 // >component.js
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
-//default styles
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+// default styles
+import '@hae-long/vue3-draggable-resizable/style.css'
 
 export default defineComponent({
   components: { Vue3DraggableResizable }
@@ -84,11 +90,11 @@ Here is a complete example of using "vue-template"
         v-model:y="y"
         v-model:w="w"
         v-model:h="h"
-        v-model:typeX="typeX"
-        v-model:typeY="typeY"
-        v-model:typeW="typeW"
-        v-model:typeH="typeH"
         v-model:active="active"
+        :typeX="typeX"
+        :typeY="typeY"
+        :typeW="typeW"
+        :typeH="typeH"
         :draggable="true"
         :resizable="true"
         @activated="print('activated')"
@@ -108,9 +114,9 @@ Here is a complete example of using "vue-template"
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
-//default styles
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+// default styles
+import '@hae-long/vue3-draggable-resizable/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable },
   data() {
@@ -119,10 +125,10 @@ export default defineComponent({
       y: 100,
       h: 25,
       w: 25,
-      typeX="px",
-      typeY="px",
-      typeW="%",
-      typeH="%",
+      typeX: 'px',
+      typeY: 'px',
+      typeW: '%',
+      typeH: '%',
       active: false
     }
   },
@@ -175,7 +181,7 @@ Set initial height(px)
 type: `Number`<br>
 default: `0`<br>
 
-Current width(px) of the container.<br>
+Current width of the container. Unit depends on `typeW` prop.<br>
 You can use "v-model:w" to keeps it up-to-date
 
 ```html
@@ -187,7 +193,7 @@ You can use "v-model:w" to keeps it up-to-date
 type: `Number`<br>
 default: `0`<br>
 
-Current height(px) of the container.<br>
+Current height of the container. Unit depends on `typeH` prop.<br>
 You can use "v-model:h" to keeps it up-to-date
 
 ```html
@@ -199,7 +205,7 @@ You can use "v-model:h" to keeps it up-to-date
 type: `Number`<br>
 default: `0`<br>
 
-Current left(px) of the container.<br>
+Current left position of the container. Unit depends on `typeX` prop.<br>
 You can use "v-model:x" to keeps it up-to-date
 
 ```html
@@ -211,11 +217,59 @@ You can use "v-model:x" to keeps it up-to-date
 type: `Number`<br>
 default: `0`<br>
 
-The current top(px) of the container.<br>
+The current top position of the container. Unit depends on `typeY` prop.<br>
 You can use "v-model:y" to keeps it up-to-date
 
 ```html
 <Vue3DraggableResizable v-model:y="100" />
+```
+
+#### typeX
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+Unit type for x position. Can be `'px'` or `'%'`.
+
+```html
+<Vue3DraggableResizable :x="10" typeX="%" />
+```
+
+#### typeY
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+Unit type for y position. Can be `'px'` or `'%'`.
+
+```html
+<Vue3DraggableResizable :y="10" typeY="%" />
+```
+
+#### typeW
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+Unit type for width. Can be `'px'` or `'%'`.
+
+```html
+<Vue3DraggableResizable :w="50" typeW="%" />
+```
+
+#### typeH
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+Unit type for height. Can be `'px'` or `'%'`.
+
+```html
+<Vue3DraggableResizable :h="50" typeH="%" />
 ```
 
 #### minW
@@ -249,7 +303,7 @@ Indicates whether the component is selected.<br>
 You can use "v-model:active" to keeps it up-to-date
 
 ```html
-<Vue3DraggableResizable v-model:active="100" />
+<Vue3DraggableResizable v-model:active="true" />
 ```
 
 #### draggable
@@ -271,7 +325,7 @@ default: `true`<br>
 Defines the component can be resizable or not
 
 ```html
-<Vue3DraggableResizable :draggable="true" />
+<Vue3DraggableResizable :resizable="true" />
 ```
 
 #### lockAspectRatio
@@ -312,7 +366,7 @@ Defines the component can be moved on y-axis or not
 type: `Boolean`<br>
 default: `false`<br>
 
-Defines the component`s width can be modify or not
+Defines the component's width can be modified or not
 
 ```html
 <Vue3DraggableResizable :disabledW="true" />
@@ -323,7 +377,7 @@ Defines the component`s width can be modify or not
 type: `Boolean`<br>
 default: `false`<br>
 
-Defines the component`s height can be modify or not
+Defines the component's height can be modified or not
 
 ```html
 <Vue3DraggableResizable :disabledH="true" />
@@ -358,6 +412,28 @@ Define the array of handles to restrict the element resizing
 
 ```html
 <Vue3DraggableResizable :handles="['tl','tr','bl','br']" />
+```
+
+#### gridSpacing
+
+type: `Number`<br>
+default: `20`<br>
+
+Grid spacing in pixels for snap-to-grid feature.
+
+```html
+<Vue3DraggableResizable :gridSpacing="50" />
+```
+
+#### snapToGrid
+
+type: `Boolean`<br>
+default: `false`<br>
+
+Enable snap-to-grid during drag and resize operations.
+
+```html
+<Vue3DraggableResizable :snapToGrid="true" :gridSpacing="50" />
 ```
 
 #### classNameDraggable
@@ -468,7 +544,7 @@ payload: `{ x: number, y: number }`
 payload: `{ x: number, y: number }`
 
 ```html
-<Vue3DraggableResizable @dragging="dragStartHandle" />
+<Vue3DraggableResizable @dragging="draggingHandle" />
 ```
 
 #### drag-end
@@ -489,7 +565,7 @@ payload: `{ x: number, y: number, w: number, h: number }`
 
 #### resizing
 
-payload: `{ x: number, y: number, w: number, h: number }v`
+payload: `{ x: number, y: number, w: number, h: number }`
 
 ```html
 <Vue3DraggableResizable @resizing="resizingHandle" />
@@ -527,12 +603,12 @@ This can be used as follows.
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
 // This component is not exported by default
-// If you used "app.use(Vue3DraggableResizable)"，then you don't need to import it, you can use it directly.
-import { DraggableContainer } from 'vue3-draggable-resizable'
-//default styles
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+// If you used "app.use(Vue3DraggableResizable)", then you don't need to import it, you can use it directly.
+import { DraggableContainer } from '@hae-long/vue3-draggable-resizable'
+// default styles
+import '@hae-long/vue3-draggable-resizable/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable, DraggableContainer }
 })
@@ -559,7 +635,7 @@ These props apply to DraggableContainer
 type: `Boolean`<br>
 default: `false`<br>
 
-Disable this feature
+Disable adsorption alignment feature
 
 ```html
 <DraggableContainer :disabled="true">
@@ -631,7 +707,7 @@ Custom guides(row)
 type: `Boolean`<br>
 default: `true`<br>
 
-reference line visible
+Reference line visible
 
 ```html
 <DraggableContainer :referenceLineVisible="false">
@@ -649,10 +725,10 @@ reference line visible
 type: `String`<br>
 default: `#f00`<br>
 
-reference line color
+Reference line color
 
 ```html
-<DraggableContainer :referenceLineColor="#0f0">
+<DraggableContainer referenceLineColor="#0f0">
   <Vue3DraggableResizable>
     Test
   </Vue3DraggableResizable>
@@ -661,3 +737,173 @@ reference line color
   </Vue3DraggableResizable>
 </DraggableContainer>
 ```
+
+### Grid System
+
+DraggableContainer supports a visual grid system with snap-to-grid functionality.
+
+#### gridSpacing
+
+type: `Number`<br>
+default: `20`<br>
+
+Grid spacing in pixels
+
+```html
+<DraggableContainer :gridSpacing="50">
+  <Vue3DraggableResizable :snapToGrid="true" :gridSpacing="50">
+    Test
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### showGrid
+
+type: `Boolean`<br>
+default: `false`<br>
+
+Show visual grid lines
+
+```html
+<DraggableContainer :showGrid="true" :gridSpacing="50">
+  <Vue3DraggableResizable>
+    Test
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### gridColor
+
+type: `String`<br>
+default: `#e0e0e0`<br>
+
+Grid line color
+
+```html
+<DraggableContainer :showGrid="true" gridColor="#ccc">
+  <Vue3DraggableResizable>
+    Test
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### showGridNumbersX
+
+type: `Boolean`<br>
+default: `false`<br>
+
+Show grid line numbers on X-axis (horizontal)
+
+```html
+<DraggableContainer :showGrid="true" :showGridNumbersX="true">
+  <Vue3DraggableResizable>
+    Test
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### showGridNumbersY
+
+type: `Boolean`<br>
+default: `false`<br>
+
+Show grid line numbers on Y-axis (vertical)
+
+```html
+<DraggableContainer :showGrid="true" :showGridNumbersY="true">
+  <Vue3DraggableResizable>
+    Test
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+### Unit Conversion
+
+The component supports both `px` and `%` units for position and size. Use the `typeX`, `typeY`, `typeW`, and `typeH` props to specify the unit type.
+
+```vue
+<template>
+  <DraggableContainer>
+    <Vue3DraggableResizable
+      :x="10"
+      :y="10"
+      :w="50"
+      :h="50"
+      typeX="%"
+      typeY="%"
+      typeW="%"
+      typeH="%"
+    >
+      50% width and height at 10% position
+    </Vue3DraggableResizable>
+  </DraggableContainer>
+</template>
+```
+
+### Utility Functions
+
+The package exports utility functions for unit conversion that you can use in your application.
+
+```js
+import {
+  convertToPixel,
+  convertFromPixel,
+  validatePercentage,
+  validatePixel,
+  generateRandomColor
+} from '@hae-long/vue3-draggable-resizable'
+
+// Convert percentage to pixels
+const pixelValue = convertToPixel(50, '%', 1000) // 500
+
+// Convert pixels to percentage
+const percentValue = convertFromPixel(500, '%', 1000) // 50
+
+// Validate percentage value (0-100)
+const isValidPercent = validatePercentage(50) // true
+
+// Validate pixel value within parent bounds
+const isValidPixel = validatePixel(100, 500) // true
+
+// Generate random hex color
+const color = generateRandomColor() // e.g., '#3A7FE1'
+```
+
+#### convertToPixel(value, unit, parentSize)
+
+Converts a value to pixels based on the unit type.
+
+- `value`: The numeric value to convert
+- `unit`: The unit type ('px' or '%')
+- `parentSize`: The parent element size in pixels
+- Returns: The value converted to pixels
+
+#### convertFromPixel(value, unit, parentSize)
+
+Converts a pixel value to the specified unit type.
+
+- `value`: The pixel value to convert
+- `unit`: The target unit type ('px' or '%')
+- `parentSize`: The parent element size in pixels
+- Returns: The value converted to the target unit (with 2 decimal precision for %)
+
+#### validatePercentage(value)
+
+Validates if a percentage value is within valid range (0-100).
+
+- `value`: The percentage value to validate
+- Returns: `true` if value is between 0 and 100 (inclusive), `false` otherwise
+
+#### validatePixel(value, parentSize)
+
+Validates if a pixel value is within parent bounds.
+
+- `value`: The pixel value to validate
+- `parentSize`: The parent element size in pixels
+- Returns: `true` if value is between 0 and parentSize (inclusive), `false` otherwise
+
+#### generateRandomColor()
+
+Generates a random hex color string.
+
+- Returns: A random color in hex format (e.g., '#3A7FE1')

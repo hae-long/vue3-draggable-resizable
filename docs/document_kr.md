@@ -5,14 +5,14 @@
 <h1 align="center">Vue3-Draggable-Resizable</h1>
 <div align="center">
 
-[![npm version](https://badge.fury.io/js/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/vue3-draggable-resizable)
+[![npm version](https://badge.fury.io/js/@hae-long/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
-[![npm](https://img.shields.io/npm/dt/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/vue3-draggable-resizable)
+[![npm](https://img.shields.io/npm/dt/@hae-long/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
 [![vue version](https://img.shields.io/badge/vue_version->=3-brightgreen.svg?style=flat-square)](https://github.com/hae-long/vue3-draggable-resizable)
 
 </div>
 
-> [Vue3 컴포넌트] 드래그하여 위치와 크기를 조정할 수 있는 컴포넌트로, 충돌 감지, 요소 스냅 정렬, 실시간 참조선을 지원합니다.
+> [Vue3 컴포넌트] 드래그하여 위치와 크기를 조정할 수 있는 컴포넌트로, 충돌 감지, 요소 스냅 정렬, 실시간 참조선, 그리드 스냅, 단위 변환(px/%)을 지원합니다.
 
 ## 문서 목차
 
@@ -21,6 +21,9 @@
   - [컴포넌트 Props](#props)
   - [컴포넌트 Events](#events)
   - [스냅 정렬 기능 사용하기](#스냅-정렬-기능-사용하기)
+  - [그리드 시스템](#그리드-시스템)
+  - [단위 변환 (px/%)](#단위-변환)
+  - [유틸리티 함수](#유틸리티-함수)
 
 ### 특징
 
@@ -32,12 +35,15 @@
 - 요소 스냅 정렬
 - 실시간 참조선
 - 사용자 정의 참조선
+- **그리드 시스템 및 스냅 투 그리드 기능**
+- **단위 변환 (px/%) 지원**
+- **단위 변환 유틸리티 함수 제공**
 - Vue3와 TypeScript 사용
 
 ### 사용법
 
 ```bash
-$ npm install vue3-draggable-resizable
+$ npm install @hae-long/vue3-draggable-resizable
 ```
 
 use 메서드로 컴포넌트 등록
@@ -46,9 +52,9 @@ use 메서드로 컴포넌트 등록
 // >main.js
 import { createApp } from 'vue'
 import App from './App.vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
 // 기본 스타일 import 필요
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import '@hae-long/vue3-draggable-resizable/style.css'
 
 // Vue3DraggableResizable이라는 전역 컴포넌트를 얻게 됩니다
 createApp(App)
@@ -61,9 +67,9 @@ createApp(App)
 ```js
 // >component.js
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
 // 기본 스타일 import 필요
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import '@hae-long/vue3-draggable-resizable/style.css'
 
 export default defineComponent({
   components: { Vue3DraggableResizable }
@@ -85,6 +91,10 @@ export default defineComponent({
         v-model:w="w"
         v-model:h="h"
         v-model:active="active"
+        :typeX="typeX"
+        :typeY="typeY"
+        :typeW="typeW"
+        :typeH="typeH"
         :draggable="true"
         :resizable="true"
         @activated="print('activated')"
@@ -104,17 +114,21 @@ export default defineComponent({
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
 // 기본 스타일
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import '@hae-long/vue3-draggable-resizable/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable },
   data() {
     return {
       x: 100,
       y: 100,
-      h: 100,
-      w: 100,
+      h: 25,
+      w: 25,
+      typeX: 'px',
+      typeY: 'px',
+      typeW: '%',
+      typeH: '%',
       active: false
     }
   },
@@ -167,7 +181,7 @@ default: `null`<br>
 type: `Number`<br>
 default: `0`<br>
 
-컴포넌트의 현재 너비 (px)<br>
+컴포넌트의 현재 너비. 단위는 `typeW` prop에 따라 결정됩니다.<br>
 "v-model:w" 문법을 사용하여 부모 컴포넌트와 동기화할 수 있습니다
 
 ```html
@@ -179,7 +193,7 @@ default: `0`<br>
 type: `Number`<br>
 default: `0`<br>
 
-컴포넌트의 현재 높이 (px)<br>
+컴포넌트의 현재 높이. 단위는 `typeH` prop에 따라 결정됩니다.<br>
 "v-model:h" 문법을 사용하여 부모 컴포넌트와 동기화할 수 있습니다
 
 ```html
@@ -191,7 +205,7 @@ default: `0`<br>
 type: `Number`<br>
 default: `0`<br>
 
-부모 컨테이너의 왼쪽으로부터의 거리 (px)<br>
+부모 컨테이너의 왼쪽으로부터의 거리. 단위는 `typeX` prop에 따라 결정됩니다.<br>
 "v-model:x" 문법을 사용하여 부모 컴포넌트와 동기화할 수 있습니다
 
 ```html
@@ -203,11 +217,59 @@ default: `0`<br>
 type: `Number`<br>
 default: `0`<br>
 
-부모 컨테이너의 상단으로부터의 거리 (px)<br>
+부모 컨테이너의 상단으로부터의 거리. 단위는 `typeY` prop에 따라 결정됩니다.<br>
 "v-model:y" 문법을 사용하여 부모 컴포넌트와 동기화할 수 있습니다
 
 ```html
 <Vue3DraggableResizable v-model:y="100" />
+```
+
+#### typeX
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+x 위치의 단위 타입. `'px'` 또는 `'%'`를 사용할 수 있습니다.
+
+```html
+<Vue3DraggableResizable :x="10" typeX="%" />
+```
+
+#### typeY
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+y 위치의 단위 타입. `'px'` 또는 `'%'`를 사용할 수 있습니다.
+
+```html
+<Vue3DraggableResizable :y="10" typeY="%" />
+```
+
+#### typeW
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+너비의 단위 타입. `'px'` 또는 `'%'`를 사용할 수 있습니다.
+
+```html
+<Vue3DraggableResizable :w="50" typeW="%" />
+```
+
+#### typeH
+
+type: `String`<br>
+default: `'px'`<br>
+validator: `['px', '%']`
+
+높이의 단위 타입. `'px'` 또는 `'%'`를 사용할 수 있습니다.
+
+```html
+<Vue3DraggableResizable :h="50" typeH="%" />
 ```
 
 #### minW
@@ -350,6 +412,28 @@ default: `['tl', 'tm', 'tr', 'ml', 'mr', 'bl', 'bm', 'br']`
 
 ```html
 <Vue3DraggableResizable :handles="['tl','tr','bl','br']" />
+```
+
+#### gridSpacing
+
+type: `Number`<br>
+default: `20`<br>
+
+스냅 투 그리드 기능을 위한 그리드 간격 (픽셀)
+
+```html
+<Vue3DraggableResizable :gridSpacing="50" />
+```
+
+#### snapToGrid
+
+type: `Boolean`<br>
+default: `false`<br>
+
+드래그 및 크기 조정 시 그리드에 스냅되도록 활성화
+
+```html
+<Vue3DraggableResizable :snapToGrid="true" :gridSpacing="50" />
 ```
 
 #### classNameDraggable
@@ -537,13 +621,13 @@ payload: `{ x: number, y: number, w: number, h: number }`
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
 // 이 컴포넌트는 기본 export가 아닙니다.
 // "app.use(Vue3DraggableResizable)"로 등록했다면,
 // 여기서 다시 import할 필요가 없습니다. DraggableContainer가 이미 전역 등록되어 있어 바로 사용할 수 있습니다.
-import { DraggableContainer } from 'vue3-draggable-resizable'
+import { DraggableContainer } from '@hae-long/vue3-draggable-resizable'
 // 기본 스타일
-import 'vue3-draggable-resizable/dist/Vue3DraggableResizable.css'
+import '@hae-long/vue3-draggable-resizable/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable, DraggableContainer }
 })
@@ -663,7 +747,7 @@ default: `#f00`<br>
 실시간 참조선의 색상입니다 (기본값: 빨간색)
 
 ```html
-<DraggableContainer :referenceLineColor="#0f0">
+<DraggableContainer referenceLineColor="#0f0">
   <Vue3DraggableResizable>
     테스트
   </Vue3DraggableResizable>
@@ -672,3 +756,173 @@ default: `#f00`<br>
   </Vue3DraggableResizable>
 </DraggableContainer>
 ```
+
+### 그리드 시스템
+
+DraggableContainer는 스냅 투 그리드 기능이 포함된 시각적 그리드 시스템을 지원합니다.
+
+#### gridSpacing
+
+type: `Number`<br>
+default: `20`<br>
+
+그리드 간격 (픽셀)
+
+```html
+<DraggableContainer :gridSpacing="50">
+  <Vue3DraggableResizable :snapToGrid="true" :gridSpacing="50">
+    테스트
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### showGrid
+
+type: `Boolean`<br>
+default: `false`<br>
+
+시각적 그리드 라인 표시
+
+```html
+<DraggableContainer :showGrid="true" :gridSpacing="50">
+  <Vue3DraggableResizable>
+    테스트
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### gridColor
+
+type: `String`<br>
+default: `#e0e0e0`<br>
+
+그리드 라인 색상
+
+```html
+<DraggableContainer :showGrid="true" gridColor="#ccc">
+  <Vue3DraggableResizable>
+    테스트
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### showGridNumbersX
+
+type: `Boolean`<br>
+default: `false`<br>
+
+X축(가로) 그리드 라인 번호 표시
+
+```html
+<DraggableContainer :showGrid="true" :showGridNumbersX="true">
+  <Vue3DraggableResizable>
+    테스트
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+#### showGridNumbersY
+
+type: `Boolean`<br>
+default: `false`<br>
+
+Y축(세로) 그리드 라인 번호 표시
+
+```html
+<DraggableContainer :showGrid="true" :showGridNumbersY="true">
+  <Vue3DraggableResizable>
+    테스트
+  </Vue3DraggableResizable>
+</DraggableContainer>
+```
+
+### 단위 변환
+
+컴포넌트는 위치와 크기에 대해 `px`와 `%` 단위를 모두 지원합니다. `typeX`, `typeY`, `typeW`, `typeH` props를 사용하여 단위 타입을 지정합니다.
+
+```vue
+<template>
+  <DraggableContainer>
+    <Vue3DraggableResizable
+      :x="10"
+      :y="10"
+      :w="50"
+      :h="50"
+      typeX="%"
+      typeY="%"
+      typeW="%"
+      typeH="%"
+    >
+      10% 위치에 50% 너비와 높이
+    </Vue3DraggableResizable>
+  </DraggableContainer>
+</template>
+```
+
+### 유틸리티 함수
+
+패키지는 애플리케이션에서 사용할 수 있는 단위 변환 유틸리티 함수를 내보냅니다.
+
+```js
+import {
+  convertToPixel,
+  convertFromPixel,
+  validatePercentage,
+  validatePixel,
+  generateRandomColor
+} from '@hae-long/vue3-draggable-resizable'
+
+// 퍼센트를 픽셀로 변환
+const pixelValue = convertToPixel(50, '%', 1000) // 500
+
+// 픽셀을 퍼센트로 변환
+const percentValue = convertFromPixel(500, '%', 1000) // 50
+
+// 퍼센트 값 검증 (0-100)
+const isValidPercent = validatePercentage(50) // true
+
+// 부모 범위 내 픽셀 값 검증
+const isValidPixel = validatePixel(100, 500) // true
+
+// 랜덤 HEX 색상 생성
+const color = generateRandomColor() // 예: '#3A7FE1'
+```
+
+#### convertToPixel(value, unit, parentSize)
+
+단위 타입에 따라 값을 픽셀로 변환합니다.
+
+- `value`: 변환할 숫자 값
+- `unit`: 단위 타입 ('px' 또는 '%')
+- `parentSize`: 부모 요소의 크기 (픽셀)
+- 반환값: 픽셀로 변환된 값
+
+#### convertFromPixel(value, unit, parentSize)
+
+픽셀 값을 지정된 단위 타입으로 변환합니다.
+
+- `value`: 변환할 픽셀 값
+- `unit`: 대상 단위 타입 ('px' 또는 '%')
+- `parentSize`: 부모 요소의 크기 (픽셀)
+- 반환값: 대상 단위로 변환된 값 (%의 경우 소수점 2자리)
+
+#### validatePercentage(value)
+
+퍼센트 값이 유효한 범위(0-100) 내에 있는지 검증합니다.
+
+- `value`: 검증할 퍼센트 값
+- 반환값: 값이 0과 100 사이(포함)이면 `true`, 그렇지 않으면 `false`
+
+#### validatePixel(value, parentSize)
+
+픽셀 값이 부모 범위 내에 있는지 검증합니다.
+
+- `value`: 검증할 픽셀 값
+- `parentSize`: 부모 요소의 크기 (픽셀)
+- 반환값: 값이 0과 parentSize 사이(포함)이면 `true`, 그렇지 않으면 `false`
+
+#### generateRandomColor()
+
+랜덤한 HEX 색상 문자열을 생성합니다.
+
+- 반환값: HEX 형식의 랜덤 색상 (예: '#3A7FE1')
