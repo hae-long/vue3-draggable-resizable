@@ -309,6 +309,13 @@ const VueDraggableResizable = defineComponent({
       }
     )
 
+    // Watch for rotation changes to update spacing indicator
+    watch(currentRotation, () => {
+      if (containerProps.enable.value) {
+        updateActiveElementInfo()
+      }
+    })
+
     // Rotation logic (state already declared above for initResizeHandle)
     let rotateStartAngle = 0
     let rotateStartRotation = 0
