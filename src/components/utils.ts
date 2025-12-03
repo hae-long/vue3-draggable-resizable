@@ -85,25 +85,20 @@ export function convertToPixel(value: number, unit: string, parentSize: number):
  * @param unit - The target unit type ('px' or '%')
  * @param parentSize - The parent element size in pixels
  * @returns The value converted to the target unit (with 2 decimal precision for %)
- * @throws Error if value or parentSize is negative, or parentSize is zero when converting to %
  */
 export function convertFromPixel(value: number, unit: string, parentSize: number): number {
-  if (value < 0) {
-    throw new Error('Value cannot be negative')
-  }
-  if (parentSize < 0) {
-    throw new Error('Parent size cannot be negative')
-  }
+  // Clamp negative values to 0 (should not happen with proper boundary constraints)
+  const safeValue = Math.max(0, value)
 
   if (unit === '%') {
     // Return 0 if parent size is not yet calculated (during initialization)
-    if (parentSize === 0) {
+    if (parentSize <= 0) {
       return 0
     }
-    const percentValue = (value / parentSize) * 100
+    const percentValue = (safeValue / parentSize) * 100
     return Number(percentValue.toFixed(2))  // Limit to 2 decimal places
   }
-  return value
+  return safeValue
 }
 
 // Unit conversion validation functions

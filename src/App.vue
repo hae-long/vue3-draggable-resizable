@@ -168,7 +168,7 @@
               :typeH="component.typeH"
               :draggable="true"
               :resizable="true"
-              :parent="false"
+              :parent="true"
               :gridSpacing="gridSpacing"
               :snapToGrid="showGrid"
               :rotatable="true"
