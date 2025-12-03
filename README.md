@@ -5,9 +5,9 @@ Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch].
 <h1 align="center">Vue3-Draggable-Resizable</h1>
 <div align="center">
 
-[![npm version](https://badge.fury.io/js/@hae-long/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
+[![npm version](https://badge.fury.io/js/vue3-draggable-resizable-plus.svg)](https://www.npmjs.com/package/vue3-draggable-resizable-plus)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
-[![npm](https://img.shields.io/npm/dt/@hae-long/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
+[![npm](https://img.shields.io/npm/dt/vue3-draggable-resizable-plus.svg?style=flat-square)](https://www.npmjs.com/package/vue3-draggable-resizable-plus)
 [![vue version](https://img.shields.io/badge/vue_version->=3-brightgreen.svg?style=flat-square)](https://github.com/hae-long/vue3-draggable-resizable)
 
 </div>
@@ -43,7 +43,7 @@ Note: This is a maintained fork of [a7650/vue3-draggable-resizable/main-branch].
 ### Usage
 
 ```bash
-$ npm install @hae-long/vue3-draggable-resizable
+$ npm install vue3-draggable-resizable-plus
 ```
 
 Register the Vue3DraggableResizable
@@ -52,9 +52,9 @@ Register the Vue3DraggableResizable
 // >main.js
 import { createApp } from 'vue'
 import App from './App.vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // default styles
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 
 // You will have a global component named "Vue3DraggableResizable"
 createApp(App)
@@ -67,9 +67,9 @@ You can also use it separately within the component
 ```js
 // >component.js
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // default styles
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 
 export default defineComponent({
   components: { Vue3DraggableResizable }
@@ -114,9 +114,9 @@ Here is a complete example of using "vue-template"
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // default styles
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable },
   data() {
@@ -603,12 +603,12 @@ This can be used as follows.
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // This component is not exported by default
 // If you used "app.use(Vue3DraggableResizable)", then you don't need to import it, you can use it directly.
-import { DraggableContainer } from '@hae-long/vue3-draggable-resizable'
+import { DraggableContainer } from 'vue3-draggable-resizable-plus'
 // default styles
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable, DraggableContainer }
 })
@@ -851,7 +851,7 @@ import {
   validatePercentage,
   validatePixel,
   generateRandomColor
-} from '@hae-long/vue3-draggable-resizable'
+} from 'vue3-draggable-resizable-plus'
 
 // Convert percentage to pixels
 const pixelValue = convertToPixel(50, '%', 1000) // 500

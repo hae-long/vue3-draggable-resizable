@@ -5,9 +5,9 @@
 <h1 align="center">Vue3-Draggable-Resizable</h1>
 <div align="center">
 
-[![npm version](https://badge.fury.io/js/@hae-long/vue3-draggable-resizable.svg)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
+[![npm version](https://badge.fury.io/js/vue3-draggable-resizable-plus.svg)](https://www.npmjs.com/package/vue3-draggable-resizable-plus)
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
-[![npm](https://img.shields.io/npm/dt/@hae-long/vue3-draggable-resizable.svg?style=flat-square)](https://www.npmjs.com/package/@hae-long/vue3-draggable-resizable)
+[![npm](https://img.shields.io/npm/dt/vue3-draggable-resizable-plus.svg?style=flat-square)](https://www.npmjs.com/package/vue3-draggable-resizable-plus)
 [![vue version](https://img.shields.io/badge/vue_version->=3-brightgreen.svg?style=flat-square)](https://github.com/hae-long/vue3-draggable-resizable)
 
 </div>
@@ -43,7 +43,7 @@
 ### 사용법
 
 ```bash
-$ npm install @hae-long/vue3-draggable-resizable
+$ npm install vue3-draggable-resizable-plus
 ```
 
 use 메서드로 컴포넌트 등록
@@ -52,9 +52,9 @@ use 메서드로 컴포넌트 등록
 // >main.js
 import { createApp } from 'vue'
 import App from './App.vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // 기본 스타일 import 필요
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 
 // Vue3DraggableResizable이라는 전역 컴포넌트를 얻게 됩니다
 createApp(App)
@@ -67,9 +67,9 @@ createApp(App)
 ```js
 // >component.js
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // 기본 스타일 import 필요
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 
 export default defineComponent({
   components: { Vue3DraggableResizable }
@@ -114,9 +114,9 @@ export default defineComponent({
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // 기본 스타일
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable },
   data() {
@@ -621,13 +621,13 @@ payload: `{ x: number, y: number, w: number, h: number }`
 
 <script>
 import { defineComponent } from 'vue'
-import Vue3DraggableResizable from '@hae-long/vue3-draggable-resizable'
+import Vue3DraggableResizable from 'vue3-draggable-resizable-plus'
 // 이 컴포넌트는 기본 export가 아닙니다.
 // "app.use(Vue3DraggableResizable)"로 등록했다면,
 // 여기서 다시 import할 필요가 없습니다. DraggableContainer가 이미 전역 등록되어 있어 바로 사용할 수 있습니다.
-import { DraggableContainer } from '@hae-long/vue3-draggable-resizable'
+import { DraggableContainer } from 'vue3-draggable-resizable-plus'
 // 기본 스타일
-import '@hae-long/vue3-draggable-resizable/style.css'
+import 'vue3-draggable-resizable-plus/style.css'
 export default defineComponent({
   components: { Vue3DraggableResizable, DraggableContainer }
 })
@@ -870,7 +870,7 @@ import {
   validatePercentage,
   validatePixel,
   generateRandomColor
-} from '@hae-long/vue3-draggable-resizable'
+} from 'vue3-draggable-resizable-plus'
 
 // 퍼센트를 픽셀로 변환
 const pixelValue = convertToPixel(50, '%', 1000) // 500
